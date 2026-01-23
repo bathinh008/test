@@ -1387,6 +1387,12 @@
                                 } else {
                                     try { addToCart(code.rawValue); } catch (e) {}
                                 }
+								
+								// === THÊM ĐOẠN NÀY ĐỂ TỰ TẮT ===
+								if (currentScanMode === 'toggle') {
+									stopScanner(); // Tắt camera ngay lập tức
+									return;        // Dừng vòng lặp quét
+								}
                             }
                         } 
                         // 2. Nếu không thấy mã -> Chuẩn bị về giữa
@@ -1446,6 +1452,13 @@
 
 			const focusBox = document.getElementById('scan-focus-box');
             const guideText = document.getElementById('scan-guide-text');
+
+			// --- THÊM ĐOẠN NÀY VÀO CUỐI HÀM stopScanner ---
+			const toggleBtn = document.getElementById('toggle-scan-btn');
+			if (toggleBtn) {
+				toggleBtn.classList.remove('bg-red-600', 'animate-pulse');
+				toggleBtn.classList.add('bg-blue-600');
+			}
 
             if(focusBox) {
                 focusBox.classList.add('hidden'); // <--- Quan trọng
@@ -3413,10 +3426,13 @@
 
 		function createToggleButton() {
 			const btn = document.createElement('button');
-			// Style: Mặc định màu xanh (sẵn sàng quét)
+			
+			// --- THÊM ID ĐỂ DỄ QUẢN LÝ ---
+			btn.id = 'toggle-scan-btn'; 
+			// -----------------------------
+
 			btn.className = "w-14 h-12 rounded-xl bg-blue-600 text-white flex items-center justify-center text-2xl shadow-lg active:scale-90 transition-transform shrink-0";
 			
-			// Icon mã QR
 			btn.innerHTML = `
 				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-7 h-7">
 				  <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
@@ -3424,26 +3440,17 @@
 				</svg>
 			`;
 			
-			// Logic Click
 			btn.onclick = () => {
-				// Kiểm tra biến toàn cục isScanning
 				if (isScanning) {
-					// Đang quét -> Tắt
 					stopScanner();
-					
-					// Đổi lại màu xanh (Sẵn sàng)
-					btn.classList.remove('bg-red-600', 'animate-pulse');
-					btn.classList.add('bg-blue-600');
+					// Việc đổi màu sẽ do hàm stopScanner lo
 				} else {
-					// Đang tắt -> Bật
 					startScanner();
-					
-					// Đổi sang màu đỏ (Đang chạy) + Hiệu ứng nhấp nháy
+					// Bật lên thì đổi màu đỏ ngay tại đây
 					btn.classList.remove('bg-blue-600');
 					btn.classList.add('bg-red-600', 'animate-pulse');
 					
-					// --- [QUAN TRỌNG] ẨN NÚT STOP TO NẾU LỠ START SCANNER BẬT LÊN ---
-					// (Dòng này để "phòng hờ" nếu bạn chưa sửa Bước 1, nhưng tốt nhất vẫn nên sửa Bước 1)
+					// Ẩn nút Stop to
 					const btnStop = document.getElementById('btn-stop-cam');
 					if(btnStop) btnStop.classList.add('hidden');
 				}
