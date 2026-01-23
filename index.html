@@ -124,14 +124,17 @@
 		
 		/* --- ZALO STYLE ANIMATION --- */
 		/* --- GIAO DIỆN QUÉT TỐI GIẢN (4 GÓC CHỮ L) --- */
+		/* ===== KHUNG QUÉT AUTO SCALE MOBILE ===== */
 		#scan-focus-box {
 			position: absolute;
 			z-index: 50;
 			pointer-events: none;
 
-			/* HÌNH VUÔNG */
-			width: 260px;
-			height: 260px;
+			/* AUTO SCALE */
+			width: min(72vmin, 320px);
+			height: min(72vmin, 320px);
+			min-width: 200px;
+			min-height: 200px;
 
 			top: 50%;
 			left: 50%;
@@ -140,16 +143,16 @@
 			background: transparent;
 		}
 
-		/* ===== 4 GÓC CHỮ L ===== */
+		/* ===== GÓC CHỮ L (AUTO SCALE) ===== */
 		.corner {
 			position: absolute;
-			width: 42px;
-			height: 42px;
 
-			border: 5px solid white;
-			border-radius: 16px;
+			width: 14%;
+			height: 14%;
 
-			/* NHỊP THỞ */
+			border: clamp(3px, 0.9vmin, 5px) solid white;
+			border-radius: clamp(10px, 3vmin, 16px);
+
 			animation: scan-breath 1.8s ease-in-out infinite;
 		}
 
@@ -159,11 +162,11 @@
 		.bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
 		.br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
 
-		/* ===== HIỆU ỨNG NHỊP THỞ ===== */
+		/* ===== NHỊP THỞ ===== */
 		@keyframes scan-breath {
 			0% {
 				opacity: 0.6;
-				transform: scale(0.97);
+				transform: scale(0.96);
 			}
 			50% {
 				opacity: 1;
@@ -171,17 +174,16 @@
 			}
 			100% {
 				opacity: 0.6;
-				transform: scale(0.97);
+				transform: scale(0.96);
 			}
 		}
 
-		/* ===== KHI BẮT DÍNH MÃ ===== */
+		/* ===== BẮT ĐƯỢC MÃ ===== */
 		.active-capture .corner {
 			animation: none;
 			border-color: #4ade80;
 			transform: scale(1.08);
 		}
-
     </style>
 </head>
 
