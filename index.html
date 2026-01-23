@@ -3453,70 +3453,92 @@
 
 		function createHoldButton() {
 			const btn = document.createElement('button');
+			let holdTimer = null; // Biến lưu bộ đếm giờ
+			const HOLD_DELAY = 300; // Thời gian phải giữ (ms) để tính là "Giữ" (0.3 giây)
+
+			// Style
+			btn.className = "w-14 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center text-2xl shadow-lg transition-all shrink-0 select-none touch-none";
 			
-			// 1. Style: Thêm user-select-none và touch-none để chặn bôi đen/cuộn trang
-			btn.className = "w-14 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center text-2xl shadow-lg transition-transform shrink-0 select-none touch-none";
-			btn.style.webkitUserSelect = "none"; // Safari
-			btn.style.userSelect = "none";       // Chrome/Android
-			btn.style.webkitTouchCallout = "none"; // Chặn menu iOS khi giữ lâu
+			// CSS chặn chọn văn bản/menu
+			btn.style.webkitUserSelect = "none";
+			btn.style.userSelect = "none";
+			btn.style.webkitTouchCallout = "none";
 
 			btn.innerHTML = "👆";
 
-			// 2. Định nghĩa hành động BẬT (Chỉ bật, không toggle)
+			// --- HÀM KÍCH HOẠT (Chạy sau khi đã giữ đủ lâu) ---
 			const activateScanner = () => {
 				if (!isScanning) {
 					startScanner();
-					// Hiệu ứng Visual: Nút lún xuống và đậm màu
-					btn.classList.add('scale-95', 'bg-orange-700', 'ring-4', 'ring-orange-300');
 					
-					// Ẩn nút Stop to nếu lỡ nó hiện
+					// Hiệu ứng Visual: Nút lún sâu, đổi màu đỏ, viền sáng
+					btn.classList.add('scale-90', 'bg-red-600', 'ring-4', 'ring-red-300', 'shadow-inner');
+					btn.innerHTML = "📷"; // Đổi icon cho sinh động
+					
+					// Ẩn nút Stop to
 					const btnStop = document.getElementById('btn-stop-cam');
 					if(btnStop) btnStop.classList.add('hidden');
+
+					// Rung nhẹ 1 cái để báo hiệu đã bật
+					if (navigator.vibrate) navigator.vibrate(100);
 				}
 			};
 
-			// 3. Định nghĩa hành động TẮT (Chỉ tắt)
+			// --- HÀM TẮT (Chạy khi buông tay) ---
 			const deactivateScanner = () => {
+				// 1. Nếu đang quét thì tắt ngay
 				if (isScanning) {
 					stopScanner();
-					// Trả lại nút bình thường
-					btn.classList.remove('scale-95', 'bg-orange-700', 'ring-4', 'ring-orange-300');
 				}
+				
+				// 2. Reset giao diện nút về ban đầu
+				btn.classList.remove('scale-90', 'bg-red-600', 'ring-4', 'ring-red-300', 'shadow-inner');
+				btn.innerHTML = "👆";
 			};
 
-			// 4. Xử lý sự kiện (Quan trọng)
+			// --- XỬ LÝ SỰ KIỆN ---
 
-			// --- BẮT ĐẦU GIỮ ---
+			// 1. KHI BẮT ĐẦU CHẠM (START)
 			const handleStart = (e) => {
-				// Chặn trình duyệt coi đây là click chuột hay cuộn trang
 				if (e.cancelable && e.type === 'touchstart') e.preventDefault();
-				activateScanner();
+
+				// Hiệu ứng "Đang nhấn" nhẹ (để biết nút nhận lệnh)
+				btn.classList.add('opacity-80', 'scale-95');
+
+				// BẮT ĐẦU ĐẾM GIỜ
+				holdTimer = setTimeout(() => {
+					activateScanner(); // Hết giờ thì bật Camera
+				}, HOLD_DELAY);
 			};
 
-			// --- BUÔNG TAY / KÉO RA NGOÀI ---
+			// 2. KHI BUÔNG TAY HOẶC KÉO RA NGOÀI (STOP)
 			const handleStop = (e) => {
-				// Không cần preventDefault ở đây để đảm bảo sự kiện kết thúc mượt
+				// Reset hiệu ứng "Đang nhấn"
+				btn.classList.remove('opacity-80', 'scale-95');
+
+				// QUAN TRỌNG NHẤT: Xóa bộ đếm giờ
+				// Nếu bạn buông tay trước 300ms, dòng này sẽ hủy lệnh activateScanner
+				// => Camera sẽ KHÔNG bao giờ bật.
+				if (holdTimer) {
+					clearTimeout(holdTimer);
+					holdTimer = null;
+				}
+
 				deactivateScanner();
 			};
 
-			// Gán sự kiện cho Điện thoại (Touch)
-			// passive: false là BẮT BUỘC để chặn hành vi mặc định
+			// Gán sự kiện Touch (Điện thoại)
 			btn.addEventListener('touchstart', handleStart, { passive: false });
 			btn.addEventListener('touchend', handleStop);
-			btn.addEventListener('touchcancel', handleStop); // Bắt buộc: Khi có cuộc gọi/tin nhắn xen ngang
+			btn.addEventListener('touchcancel', handleStop);
 
-			// Gán sự kiện cho Máy tính (Mouse)
+			// Gán sự kiện Mouse (Máy tính)
 			btn.addEventListener('mousedown', handleStart);
 			btn.addEventListener('mouseup', handleStop);
-			btn.addEventListener('mouseleave', handleStop); // Quan trọng: Kéo chuột ra khỏi nút thì tắt ngay
+			btn.addEventListener('mouseleave', handleStop);
 
-			// 5. CHẶN MENU CHUỘT PHẢI (CONTEXT MENU)
-			// Cái này cực quan trọng: Nếu giữ lâu hiện menu thì sự kiện "buông tay" sẽ bị mất -> Gây kẹt nút
-			btn.oncontextmenu = function(event) {
-				event.preventDefault();
-				event.stopPropagation();
-				return false;
-			};
+			// Chặn menu chuột phải
+			btn.oncontextmenu = (e) => { e.preventDefault(); return false; };
 
 			return btn;
 		}
