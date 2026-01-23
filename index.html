@@ -120,7 +120,94 @@
 				size: auto; 
 				margin: 0mm; /* Quan trọng: Đặt về 0 để không bị trình duyệt tự thêm lề trắng */
 			}
-		}		
+		}
+
+		/* =========================================
+		   GIAO DIỆN QUÉT MINIMALIST (THEO ẢNH)
+		   ========================================= */
+
+		#scan-focus-box {
+			position: absolute;
+			z-index: 50;
+			pointer-events: none;
+
+			/* Kích thước mặc định */
+			width: 260px;
+			height: 260px;
+
+			/* Căn giữa màn hình */
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			
+			/* Hiệu ứng di chuyển mượt */
+			transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+			
+			/* Overlay tối xung quanh: Giữ nguyên để làm nổi bật khung trắng */
+			
+		}
+
+		/* --- ĐỊNH DẠNG 4 GÓC (THEO ẢNH MẪU) --- */
+		.border-corner {
+			position: absolute;
+			width: 60px;  /* Độ dài cạnh ngang */
+			height: 60px; /* Độ dài cạnh dọc */
+			
+			/* Màu trắng hơi đục nhẹ cho dịu mắt (giống trong hình chụp qua cam) */
+			border: 6px solid rgba(255, 255, 255, 0.9); 
+			
+			/* Bo góc khung: Tạo cảm giác mềm mại */
+			border-radius: 5px; 
+			
+			/* Đổ bóng nhẹ để nổi bật trên nền sáng */
+			filter: drop-shadow(0 0 4px rgba(0,0,0,0.2));
+		}
+
+		/* --- VỊ TRÍ & CẮT CẠNH TỪNG GÓC --- */
+
+		/* Góc Trái Trên */
+		.tl { 
+			top: 0; left: 0; 
+			border-right: none; 
+			border-bottom: none; 
+			border-top-left-radius: 15px; /* Bo cong nhiều hơn ở đỉnh */
+		}
+
+		/* Góc Phải Trên */
+		.tr { 
+			top: 0; right: 0; 
+			border-left: none; 
+			border-bottom: none; 
+			border-top-right-radius: 15px; 
+		}
+
+		/* Góc Trái Dưới */
+		.bl { 
+			bottom: 0; left: 0; 
+			border-right: none; 
+			border-top: none; 
+			border-bottom-left-radius: 15px; 
+		}
+
+		/* Góc Phải Dưới */
+		.br { 
+			bottom: 0; right: 0; 
+			border-left: none; 
+			border-top: none; 
+			border-bottom-right-radius: 15px; 
+		}
+
+		/* --- HIỆU ỨNG KHI BẮT ĐƯỢC MÃ --- */
+		#scan-focus-box.active-capture {
+			/* Khi bắt được mã, khung co lại một chút và đổi màu xanh nhẹ */
+			transform: translate(-50%, -50%) scale(0.95);
+			box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+		}
+
+		#scan-focus-box.active-capture .border-corner {
+			border-color: #4ade80; /* Chuyển sang màu xanh lá (Green-400) */
+			transition: border-color 0.2s;
+		}
 	</style>
 </head>
 
@@ -246,6 +333,13 @@
 			<div id="multiplier-badge" 
 				 class="hidden absolute top-10 inset-x-0 mx-auto w-fit z-30 bg-red-600 text-white px-4 py-1 rounded-full font-bold shadow-lg border border-white animate-bounce">
 				Số lượng: x<span id="multiplier-val">1</span><span> Sản phẩm</span>
+			</div>
+
+			<div id="scan-focus-box" class="idle-state hidden">
+				<div class="border-corner tl"></div>
+				<div class="border-corner tr"></div>
+				<div class="border-corner bl"></div>
+				<div class="border-corner br"></div>
 			</div>
 
 			<div id="camera-placeholder" class="z-20 text-center absolute">
@@ -3359,57 +3453,70 @@
 
 		function createHoldButton() {
 			const btn = document.createElement('button');
-			// Style: Màu cam, thêm user-select-none để không bị bôi đen khi giữ lâu
-			btn.className = "w-14 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center text-2xl shadow-lg transition-transform shrink-0 select-none touch-none";
-			btn.style.userSelect = "none"; // Chặn bôi đen văn bản
-			btn.style.webkitUserSelect = "none"; // Cho Safari/iPhone
 			
-			// Icon ngón tay chỉ
+			// 1. Style: Thêm user-select-none và touch-none để chặn bôi đen/cuộn trang
+			btn.className = "w-14 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center text-2xl shadow-lg transition-transform shrink-0 select-none touch-none";
+			btn.style.webkitUserSelect = "none"; // Safari
+			btn.style.userSelect = "none";       // Chrome/Android
+			btn.style.webkitTouchCallout = "none"; // Chặn menu iOS khi giữ lâu
+
 			btn.innerHTML = "👆";
 
-			// --- HÀM BẬT (Khi nhấn xuống) ---
-			const startAction = (e) => {
-				// Ngăn sự kiện click ảo và menu chuột phải
-				if (e.cancelable) e.preventDefault();
-				
-				// Chỉ bật nếu chưa bật
+			// 2. Định nghĩa hành động BẬT (Chỉ bật, không toggle)
+			const activateScanner = () => {
 				if (!isScanning) {
 					startScanner();
+					// Hiệu ứng Visual: Nút lún xuống và đậm màu
+					btn.classList.add('scale-95', 'bg-orange-700', 'ring-4', 'ring-orange-300');
 					
-					// Hiệu ứng nút: Phóng to + Đổi màu đậm hơn
-					btn.classList.add('scale-110', 'bg-orange-600', 'ring-4', 'ring-orange-300');
-					
-					// Ẩn nút Stop to (nếu lỡ hiện ra do hàm startScanner)
+					// Ẩn nút Stop to nếu lỡ nó hiện
 					const btnStop = document.getElementById('btn-stop-cam');
 					if(btnStop) btnStop.classList.add('hidden');
 				}
 			};
 
-			// --- HÀM TẮT (Khi buông tay) ---
-			const stopAction = (e) => {
-				if (e.cancelable) e.preventDefault();
-
-				// Chỉ tắt nếu đang bật
+			// 3. Định nghĩa hành động TẮT (Chỉ tắt)
+			const deactivateScanner = () => {
 				if (isScanning) {
 					stopScanner();
-					
-					// Trả lại hiệu ứng nút bình thường
-					btn.classList.remove('scale-110', 'bg-orange-600', 'ring-4', 'ring-orange-300');
+					// Trả lại nút bình thường
+					btn.classList.remove('scale-95', 'bg-orange-700', 'ring-4', 'ring-orange-300');
 				}
 			};
 
-			// --- GÁN SỰ KIỆN (EVENT LISTENERS) ---
-			
-			// 1. Dành cho Điện thoại (Touch)
-			// { passive: false } là BẮT BUỘC để dùng được e.preventDefault()
-			btn.addEventListener('touchstart', startAction, { passive: false });
-			btn.addEventListener('touchend', stopAction);
-			btn.addEventListener('touchcancel', stopAction); // Nếu có cuộc gọi đến hoặc popup làm gián đoạn
+			// 4. Xử lý sự kiện (Quan trọng)
 
-			// 2. Dành cho Máy tính (Mouse)
-			btn.addEventListener('mousedown', startAction);
-			btn.addEventListener('mouseup', stopAction);
-			btn.addEventListener('mouseleave', stopAction); // Nếu chuột trượt ra khỏi nút thì tắt luôn
+			// --- BẮT ĐẦU GIỮ ---
+			const handleStart = (e) => {
+				// Chặn trình duyệt coi đây là click chuột hay cuộn trang
+				if (e.cancelable && e.type === 'touchstart') e.preventDefault();
+				activateScanner();
+			};
+
+			// --- BUÔNG TAY / KÉO RA NGOÀI ---
+			const handleStop = (e) => {
+				// Không cần preventDefault ở đây để đảm bảo sự kiện kết thúc mượt
+				deactivateScanner();
+			};
+
+			// Gán sự kiện cho Điện thoại (Touch)
+			// passive: false là BẮT BUỘC để chặn hành vi mặc định
+			btn.addEventListener('touchstart', handleStart, { passive: false });
+			btn.addEventListener('touchend', handleStop);
+			btn.addEventListener('touchcancel', handleStop); // Bắt buộc: Khi có cuộc gọi/tin nhắn xen ngang
+
+			// Gán sự kiện cho Máy tính (Mouse)
+			btn.addEventListener('mousedown', handleStart);
+			btn.addEventListener('mouseup', handleStop);
+			btn.addEventListener('mouseleave', handleStop); // Quan trọng: Kéo chuột ra khỏi nút thì tắt ngay
+
+			// 5. CHẶN MENU CHUỘT PHẢI (CONTEXT MENU)
+			// Cái này cực quan trọng: Nếu giữ lâu hiện menu thì sự kiện "buông tay" sẽ bị mất -> Gây kẹt nút
+			btn.oncontextmenu = function(event) {
+				event.preventDefault();
+				event.stopPropagation();
+				return false;
+			};
 
 			return btn;
 		}
