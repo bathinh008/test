@@ -3359,27 +3359,57 @@
 
 		function createHoldButton() {
 			const btn = document.createElement('button');
-			btn.className = "w-14 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center text-2xl shadow-lg active:scale-90 transition-transform shrink-0 select-none touch-none";
-			btn.innerHTML = "👆";
+			// Style: Màu cam, thêm user-select-none để không bị bôi đen khi giữ lâu
+			btn.className = "w-14 h-12 rounded-xl bg-orange-500 text-white flex items-center justify-center text-2xl shadow-lg transition-transform shrink-0 select-none touch-none";
+			btn.style.userSelect = "none"; // Chặn bôi đen văn bản
+			btn.style.webkitUserSelect = "none"; // Cho Safari/iPhone
 			
-			const start = (e) => { 
-				if(e.cancelable) e.preventDefault(); 
-				startScanner(); 
-				btn.classList.add('scale-110', 'bg-orange-600'); 
-			};
-			const stop = (e) => { 
-				if(e.cancelable) e.preventDefault(); 
-				stopScanner(); 
-				btn.classList.remove('scale-110', 'bg-orange-600'); 
+			// Icon ngón tay chỉ
+			btn.innerHTML = "👆";
+
+			// --- HÀM BẬT (Khi nhấn xuống) ---
+			const startAction = (e) => {
+				// Ngăn sự kiện click ảo và menu chuột phải
+				if (e.cancelable) e.preventDefault();
+				
+				// Chỉ bật nếu chưa bật
+				if (!isScanning) {
+					startScanner();
+					
+					// Hiệu ứng nút: Phóng to + Đổi màu đậm hơn
+					btn.classList.add('scale-110', 'bg-orange-600', 'ring-4', 'ring-orange-300');
+					
+					// Ẩn nút Stop to (nếu lỡ hiện ra do hàm startScanner)
+					const btnStop = document.getElementById('btn-stop-cam');
+					if(btnStop) btnStop.classList.add('hidden');
+				}
 			};
 
-			btn.addEventListener('touchstart', start, { passive: false });
-			btn.addEventListener('touchend', stop);
-			btn.addEventListener('mousedown', start);
-			btn.addEventListener('mouseup', stop);
-			btn.addEventListener('mouseleave', () => {
-				if (html5QrcodeScanner && html5QrcodeScanner.isScanning) stop();
-			});
+			// --- HÀM TẮT (Khi buông tay) ---
+			const stopAction = (e) => {
+				if (e.cancelable) e.preventDefault();
+
+				// Chỉ tắt nếu đang bật
+				if (isScanning) {
+					stopScanner();
+					
+					// Trả lại hiệu ứng nút bình thường
+					btn.classList.remove('scale-110', 'bg-orange-600', 'ring-4', 'ring-orange-300');
+				}
+			};
+
+			// --- GÁN SỰ KIỆN (EVENT LISTENERS) ---
+			
+			// 1. Dành cho Điện thoại (Touch)
+			// { passive: false } là BẮT BUỘC để dùng được e.preventDefault()
+			btn.addEventListener('touchstart', startAction, { passive: false });
+			btn.addEventListener('touchend', stopAction);
+			btn.addEventListener('touchcancel', stopAction); // Nếu có cuộc gọi đến hoặc popup làm gián đoạn
+
+			// 2. Dành cho Máy tính (Mouse)
+			btn.addEventListener('mousedown', startAction);
+			btn.addEventListener('mouseup', stopAction);
+			btn.addEventListener('mouseleave', stopAction); // Nếu chuột trượt ra khỏi nút thì tắt luôn
 
 			return btn;
 		}
