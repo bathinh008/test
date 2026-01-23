@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo Quét Mã Vạch (Native + Wasm)</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .scanner-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        /* Canvas vẽ khung đè lên video */
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #result {
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: white;
+            border-radius: 8px;
+            font-weight: bold;
+            color: #333;
+            min-width: 200px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:disabled {
+            background-color: #ccc;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="scanner-container">
+        <video id="video" playsinline muted autoplay></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div id="result">Chưa phát hiện mã...</div>
+
+    <div class="controls">
+        <button id="startBtn">Bắt đầu Quét</button>
+    </div>
+
+    <script type="module">
+        // SỬA LỖI: Import đúng tên 'BarcodeDetector' thay vì 'BarcodeDetectorPolyfill'
+        import { BarcodeDetector } from "https://cdn.jsdelivr.net/npm/barcode-detector@2/dist/es/index.min.js";
+
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const resultDiv = document.getElementById('result');
+        const startBtn = document.getElementById('startBtn');
+        
+        let detector;
+
+        // 1. Khởi tạo Detector (Đã tối ưu logic)
+        async function initDetector() {
+            const formats = ['qr_code', 'ean_13', 'code_128', 'code_39'];
+            
+            // Logic: Kiểm tra xem trình duyệt có hỗ trợ sẵn không?
+            // Lưu ý: Chrome trên Android thường có sẵn, nhưng Chrome trên PC thì chưa chắc.
+            if ('BarcodeDetector' in window) {
+                console.log('Đang thử dùng Native BarcodeDetector...');
+                try {
+                    const nativeDetector = new window.BarcodeDetector({ formats });
+                    // Thử kiểm tra xem native có hỗ trợ định dạng này không
+                    const supported = await window.BarcodeDetector.getSupportedFormats();
+                    if (supported.includes('qr_code')) {
+                        detector = nativeDetector;
+                        console.log('=> Đã kích hoạt Native Mode (Siêu nhanh)');
+                        return;
+                    }
+                } catch (e) {
+                    console.log('Native lỗi, chuyển sang Polyfill...');
+                }
+            }
+
+            // Fallback: Nếu không có native hoặc lỗi, dùng thư viện đã import
+            console.log('=> Đang dùng Polyfill (Wasm/JS Mode)');
+            detector = new BarcodeDetector({ formats });
+        }
+
+        function drawOutline(detectedCodes) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            detectedCodes.forEach(code => {
+                const { x, y, width, height } = code.boundingBox;
+                
+                ctx.strokeStyle = "red";
+                ctx.lineWidth = 4;
+                ctx.strokeRect(x, y, width, height);
+
+                resultDiv.innerText = `Mã: ${code.rawValue} (${code.format})`;
+                resultDiv.style.color = "green";
+                console.log(code);
+            });
+        }
+
+        async function scan() {
+            if (video.readyState === video.HAVE_ENOUGH_DATA && detector) {
+                try {
+                    const detectedCodes = await detector.detect(video);
+                    if (detectedCodes.length > 0) {
+                        drawOutline(detectedCodes);
+                    } else {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height); 
+                    }
+                } catch (err) {
+                    // Lỗi này thường do camera chưa nét hoặc đang xoay, có thể bỏ qua
+                    // console.error(err); 
+                }
+            }
+            requestAnimationFrame(scan);
+        }
+
+        startBtn.addEventListener('click', async () => {
+            startBtn.disabled = true;
+            startBtn.innerText = "Đang khởi động...";
+
+            await initDetector();
+            
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: "environment",
+                        width: { ideal: 1920 }, // Tăng lên Full HD để bắt mã vạch nhỏ tốt hơn
+                        height: { ideal: 1080 },
+                        focusMode: "continuous" // Thử yêu cầu lấy nét liên tục (Android)
+                    } 
+                });
+                video.srcObject = stream;
+                await video.play();
+                
+                startBtn.innerText = "Đang quét...";
+                scan();
+            } catch (err) {
+                alert("Lỗi camera: " + err.message);
+                startBtn.disabled = false;
+                startBtn.innerText = "Bắt đầu Quét";
+            }
+        });
+    </script>
+</body>
+</html>
