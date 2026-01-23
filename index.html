@@ -120,71 +120,8 @@
 				size: auto; 
 				margin: 0mm; /* Quan trọng: Đặt về 0 để không bị trình duyệt tự thêm lề trắng */
 			}
-		}
-		
-		/* --- ZALO STYLE ANIMATION --- */
-		/* --- GIAO DIỆN QUÉT TỐI GIẢN (4 GÓC CHỮ L) --- */
-		/* ===== KHUNG QUÉT AUTO SCALE MOBILE ===== */
-		#scan-focus-box {
-			position: absolute;
-			z-index: 50;
-			pointer-events: none;
-
-			/* AUTO SCALE */
-			width: min(72vmin, 320px);
-			height: min(72vmin, 320px);
-			min-width: 200px;
-			min-height: 200px;
-
-			top: 50%;
-			left: 50%;
-			transform: translate(-50%, -50%);
-
-			background: transparent;
-		}
-
-		/* ===== GÓC CHỮ L (AUTO SCALE) ===== */
-		.corner {
-			position: absolute;
-
-			width: 14%;
-			height: 14%;
-
-			border: clamp(3px, 0.9vmin, 5px) solid white;
-			border-radius: clamp(10px, 3vmin, 16px);
-
-			animation: scan-breath 1.8s ease-in-out infinite;
-		}
-
-		/* Cắt cạnh tạo chữ L */
-		.tl { top: 0; left: 0; border-right: 0; border-bottom: 0; }
-		.tr { top: 0; right: 0; border-left: 0; border-bottom: 0; }
-		.bl { bottom: 0; left: 0; border-right: 0; border-top: 0; }
-		.br { bottom: 0; right: 0; border-left: 0; border-top: 0; }
-
-		/* ===== NHỊP THỞ ===== */
-		@keyframes scan-breath {
-			0% {
-				opacity: 0.6;
-				transform: scale(0.96);
-			}
-			50% {
-				opacity: 1;
-				transform: scale(1);
-			}
-			100% {
-				opacity: 0.6;
-				transform: scale(0.96);
-			}
-		}
-
-		/* ===== BẮT ĐƯỢC MÃ ===== */
-		.active-capture .corner {
-			animation: none;
-			border-color: #4ade80;
-			transform: scale(1.08);
-		}
-    </style>
+		}		
+	</style>
 </head>
 
 <body class="h-screen overflow-hidden flex flex-col">
@@ -294,12 +231,7 @@
 				
 				<div class="absolute inset-0 bg-black/30 z-10"></div>
 
-				<div id="scan-focus-box" class="hidden idle-state">
-					<div class="corner tl"></div>
-					<div class="corner tr"></div>
-					<div class="corner bl"></div>
-					<div class="corner br"></div>
-				</div>
+				
 
 				<div id="scan-guide-text" class="hidden absolute bottom-20 left-0 right-0 text-center z-20 pointer-events-none">
 					<span class="text-white text-sm bg-black/40 px-4 py-2 rounded-full backdrop-blur-md">
