@@ -131,20 +131,20 @@
 			z-index: 50;
 			pointer-events: none;
 
-			/* Kích thước khung chờ */
+			/* Kích thước mặc định */
 			width: 260px;
 			height: 260px;
 
-			/* Luôn căn giữa màn hình */
+			/* Căn giữa màn hình */
 			top: 50%;
 			left: 50%;
-			transform: translate(-50%, -50%) scale(1); /* Mặc định tỉ lệ 1 */
-
-			transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); /* Hiệu ứng nảy (Bouncing) */
+			transform: translate(-50%, -50%);
 			
-			/* Overlay tối */
-			box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); 
-			border-radius: 30px;
+			/* Hiệu ứng di chuyển mượt */
+			transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+			
+			/* Overlay tối xung quanh: Giữ nguyên để làm nổi bật khung trắng */
+			
 		}
 
 		/* --- ĐỊNH DẠNG 4 GÓC (THEO ẢNH MẪU) --- */
@@ -197,18 +197,16 @@
 			border-bottom-right-radius: 15px; 
 		}
 
-		/* --- TRẠNG THÁI: KHI QUÉT TRÚNG MÃ (SỬA LẠI PHẦN NÀY) --- */
+		/* --- HIỆU ỨNG KHI BẮT ĐƯỢC MÃ --- */
 		#scan-focus-box.active-capture {
-			/* 1. Thu nhỏ khung lại một chút (Snap effect) */
-			transform: translate(-50%, -50%) scale(0.85);
-			
-			/* 2. Đổi màu viền sang xanh */
-			box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6); 
+			/* Khi bắt được mã, khung co lại một chút và đổi màu xanh nhẹ */
+			transform: translate(-50%, -50%) scale(0.95);
+			box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
 		}
 
 		#scan-focus-box.active-capture .border-corner {
-			border-color: #4ade80; /* Màu xanh lá */
-			filter: drop-shadow(0 0 8px rgba(74, 222, 128, 0.6)); /* Phát sáng */
+			border-color: #4ade80; /* Chuyển sang màu xanh lá (Green-400) */
+			transition: border-color 0.2s;
 		}
 	</style>
 </head>
@@ -1342,52 +1340,47 @@
 						const codes = await detector.detect(videoEl);
 						const focusBox = document.getElementById('scan-focus-box');
 						
-						// 1. Nếu bắt được mã
 						if (codes.length > 0) {
 							const code = codes[0]; 
 
+							// 1. Chỉ đổi màu (Thêm class active-capture)
 							if (focusBox) {
-								// Kích hoạt hiệu ứng "Thu nhỏ" (Snap)
-								// Không set style left/top nữa để tránh bị lỗi lệch
 								focusBox.classList.remove('idle-state');
 								focusBox.classList.add('active-capture');
 							}
 
-							// --- XỬ LÝ LOGIC NGHIỆP VỤ ---
+							// 2. Xử lý nghiệp vụ (Thêm giỏ hàng / Check giá)
 							const currentTime = Date.now();
-							// Debounce: 1 giây mới nhận 1 lần
 							if (code.rawValue !== lastScannedCode || (currentTime - lastScanTime > 1000)) {
 								lastScannedCode = code.rawValue;
 								lastScanTime = currentTime;
 								
 								if (typeof playBeepSound === "function") playBeepSound();
-								console.log("Bắt dính mã:", code.rawValue);
-
-								// Gửi mã đi xử lý
+								
+								// Logic xử lý mã
 								if (typeof isCheckPriceMode !== 'undefined' && isCheckPriceMode) {
 									processCheckPrice(code.rawValue);
 								} else {
 									try { addToCart(code.rawValue); } catch (e) {}
 								}
 
-								// Nếu đang dùng chế độ nút Toggle thì tắt cam ngay
+								// Nếu dùng nút Toggle thì tự tắt cam
 								if (typeof currentScanMode !== 'undefined' && currentScanMode === 'toggle') {
 									stopScanner();
 									return;
 								}
 							}
 						} 
-						// 2. Nếu không thấy mã
 						else {
+							// Không thấy mã -> Trả về màu trắng
 							if (focusBox) {
-								// Trả về trạng thái khung to bình thường
 								focusBox.classList.add('idle-state');
 								focusBox.classList.remove('active-capture');
 							}
 						}
 
 					} catch (err) {
-						// Bỏ qua lỗi detect
+						// Bỏ qua lỗi
 					}
 
 					requestAnimationFrame(renderLoop);
